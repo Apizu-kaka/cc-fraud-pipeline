@@ -1,0 +1,186 @@
+{
+  "__inputs": [],
+  "id": null,
+  "uid": "fraud-detection",
+  "title": "🔍 Real-time Fraud Detection",
+  "tags": ["fraud", "streaming"],
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total Fraud Alerts",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS \"Total Alerts\" FROM fraud_alerts",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1000 },
+              { "color": "red", "value": 10000 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "Alerts by Rule",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "rawSql": "SELECT rule_triggered AS \"Rule\", COUNT(*) AS \"Count\" FROM fraud_alerts GROUP BY rule_triggered",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [],
+          "fields": "/^Count$/"
+        },
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "pieType": "pie",
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Avg Risk Score by Rule",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "rawSql": "SELECT rule_triggered AS \"Rule\", ROUND(AVG(risk_score)::numeric, 1) AS \"Avg Risk\" FROM fraud_alerts GROUP BY rule_triggered ORDER BY \"Avg Risk\" DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 50 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Total Fraud Amount",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "rawSql": "SELECT ROUND(SUM(amount)::numeric, 2) AS \"Total Amount\" FROM fraud_alerts",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" }
+    },
+    {
+      "id": 8,
+      "title": "HIGH_AMOUNT Alerts",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS \"High Amount\" FROM fraud_alerts WHERE rule_triggered = 'HIGH_AMOUNT'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } }, "overrides": [] }
+    },
+    {
+      "id": 9,
+      "title": "DRAIN_ACCOUNT Alerts",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 4 },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS \"Drain Account\" FROM fraud_alerts WHERE rule_triggered = 'DRAIN_ACCOUNT'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "orange" } }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "title": "Fraud Alerts Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('minute', detected_at) AS time, rule_triggered, COUNT(*) AS alerts FROM fraud_alerts GROUP BY 1, 2 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "spanNulls": true,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Top 20 Flagged Accounts",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "rawSql": "SELECT account_orig AS \"Account\", COUNT(*) AS \"Alerts\", ROUND(SUM(amount)::numeric, 2) AS \"Total Amount\", MAX(risk_score) AS \"Max Risk\" FROM fraud_alerts GROUP BY account_orig ORDER BY \"Alerts\" DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" }
+    },
+    {
+      "id": 6,
+      "title": "Recent Fraud Alerts",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "rawSql": "SELECT detected_at AS \"Time\", rule_triggered AS \"Rule\", account_orig AS \"From\", account_dest AS \"To\", txn_type AS \"Type\", amount AS \"Amount\", risk_score AS \"Risk\" FROM fraud_alerts ORDER BY detected_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "uid": "PCC52D03280B7034C", "type": "grafana-postgresql-datasource" }
+    }
+  ]
+}
